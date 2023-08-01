@@ -46,7 +46,7 @@ public class IlbkoWeisWave implements
     private static final long CANDLE_INTERVAL_NS = TimeUnit.SECONDS.toNanos(30);
 
     private static final String TREE_NAME = "Bars";
-    private static final Class<?>[] INTERESTING_CUSTOM_EVENTS = new Class<?>[] { BarEvent.class };
+    private static final Class<?>[] CUSTOM_EVENTS = new Class<?>[] { BarEvent.class };
 
     private static final int MAX_BODY_WIDTH = 30;
     private static final int MIN_BODY_WIDTH = 1;
@@ -123,7 +123,7 @@ public class IlbkoWeisWave implements
         Double pips = pipsMap.get(indicatorAlias);
 
         List<DataStructureInterface.TreeResponseInterval> result = dataStructureInterface.get(IlbkoWeisWave.class, TREE_NAME, t0,
-                intervalWidth, intervalsNumber, indicatorAlias, INTERESTING_CUSTOM_EVENTS);
+                intervalWidth, intervalsNumber, indicatorAlias, CUSTOM_EVENTS);
 
         int bodyWidth = getBodyWidth(intervalWidth);
 

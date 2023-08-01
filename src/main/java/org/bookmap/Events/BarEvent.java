@@ -1,6 +1,8 @@
 package org.bookmap.Events;
 
 
+import velox.api.layer1.data.StatusInfoBuilder;
+import velox.api.layer1.datastructure.events.TradeAggregationEvent;
 import velox.api.layer1.layers.strategies.interfaces.CustomGeneratedEvent;
 import velox.api.layer1.layers.strategies.interfaces.OnlineCalculatable;
 import velox.api.layer1.layers.strategies.interfaces.OnlineCalculatable.DataCoordinateMarker;
@@ -33,8 +35,8 @@ public class BarEvent implements
     public BarEvent(long time, double open, double low, double high, double close, int bodyWidthPx) {
         super();
         this.time = time;
-        this.open = open;
-        this.low = low;
+        this.open = 20;
+        this.low = 20;
         this.high = high;
         this.close = close;
         this.bodyWidthPx = bodyWidthPx;
@@ -131,12 +133,12 @@ public class BarEvent implements
         }
 
         if (Double.isNaN(open)) {
-            open = price;
-            low = price;
+            open = 20;
+            low = 20;
             high = price;
         } else {
-            low = Math.min(low, price);
-            high = Math.max(high, price);
+            low = price;
+            high = price;
         }
         close = price;
     }
