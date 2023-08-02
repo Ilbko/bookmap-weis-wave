@@ -1,8 +1,6 @@
 package org.bookmap.Events;
 
-
-import velox.api.layer1.data.StatusInfoBuilder;
-import velox.api.layer1.datastructure.events.TradeAggregationEvent;
+import velox.api.layer1.common.Log;
 import velox.api.layer1.layers.strategies.interfaces.CustomGeneratedEvent;
 import velox.api.layer1.layers.strategies.interfaces.OnlineCalculatable;
 import velox.api.layer1.layers.strategies.interfaces.OnlineCalculatable.DataCoordinateMarker;
@@ -17,33 +15,27 @@ public class BarEvent implements
     private static final long serialVersionUID = 1L;
 
     private long time;
-    private double open, close, low, high;
+    private final double OPEN = 0;
+    private int volume;
     private transient int bodyWidthPx;
 
     public BarEvent(long time) {
-        this(time, Double.NaN);
+        this(time, 0);
     }
 
-    public BarEvent(long time, double open) {
-        this(time, open, -1);
+    public BarEvent(long time, int volume) {
+        this(time, volume, -1);
     }
 
-    public BarEvent(long time, double open, int bodyWidthPx) {
-        this(time, open, open, open, open, bodyWidthPx);
-    }
-
-    public BarEvent(long time, double open, double low, double high, double close, int bodyWidthPx) {
+    public BarEvent(long time, int volume, int bodyWidthPx) {
         super();
         this.time = time;
-        this.open = 20;
-        this.low = 20;
-        this.high = high;
-        this.close = close;
+        this.volume = volume;
         this.bodyWidthPx = bodyWidthPx;
     }
 
     public BarEvent(BarEvent other) {
-        this(other.time, other.open, other.low, other.high, other.close, other.bodyWidthPx);
+        this(other.time, other.volume, other.bodyWidthPx);
     }
 
     public void setBodyWidthPx(int bodyWidthPx) {
@@ -61,99 +53,62 @@ public class BarEvent implements
 
     @Override
     public double getMinY() {
-        return open;
+        return OPEN;
     }
 
     @Override
     public double getMaxY() {
-        return high;
+        return volume;
     }
 
     @Override
     public double getValueY() {
-        return low;
+        return OPEN;
     }
 
-    public double getClose() {
-        return close;
-    }
-
-    @Override
-    public String toString() {
-        return "BarEvent{" +
-                "time=" + time +
-                ", open=" + open +
-                ", close=" + close +
-                ", low=" + low +
-                ", high=" + high +
-                '}';
+    public int getVolume() {
+        return volume;
     }
 
     @Override
     public OnlineCalculatable.Marker makeMarker(Function<Double, Integer> yDataCoordinateToPixelFunction) {
-        int top = yDataCoordinateToPixelFunction.apply(high);
-        int bottom = yDataCoordinateToPixelFunction.apply(low);
-        int openPx = yDataCoordinateToPixelFunction.apply(open);
-        int closePx = yDataCoordinateToPixelFunction.apply(close);
+        /* May return minimum value of an integer upon rewinding a replay and then throwing OutOfMemory at line 80 due
+        to abysmally large imageHeight. No idea why that value is being returned, because volume at that moment is within
+        normal values. */
+        int top = yDataCoordinateToPixelFunction.apply((double) volume);
+        if (top < 0)
+            return null;
 
-        int bodyLow = Math.min(openPx, closePx);
-        int bodyHigh = Math.max(openPx, closePx);
+        int bottom = yDataCoordinateToPixelFunction.apply(OPEN);
 
         int imageHeight = top - bottom + 1;
         BufferedImage bufferedImage = new BufferedImage(bodyWidthPx, imageHeight, BufferedImage.TYPE_INT_ARGB);
+
         int imageCenterX = bufferedImage.getWidth() / 2;
 
         Graphics2D graphics = bufferedImage.createGraphics();
         graphics.setBackground(new Color(0, 0, 0, 0));
         graphics.clearRect(0, 0, bufferedImage.getWidth(), bufferedImage.getHeight());
 
-        graphics.setColor(Color.WHITE);
-        graphics.drawLine(imageCenterX, 0, imageCenterX, imageHeight);
-
-        graphics.setColor(open < close ? Color.GREEN : Color.RED);
-        graphics.fillRect(0, top - bodyHigh, bodyWidthPx, bodyHigh - bodyLow + 1);
+        graphics.setColor(Color.GREEN);
+        graphics.fillRect(0, 0, bodyWidthPx, top);
 
         graphics.dispose();
 
-
-        int iconOffsetY = bottom - closePx;
-
         int iconOffsetX = -imageCenterX;
-        return new OnlineCalculatable.Marker(close, iconOffsetX, iconOffsetY, bufferedImage);
+        return new OnlineCalculatable.Marker(0, iconOffsetX, 0, bufferedImage);
     }
 
     @Override
     public Object clone() {
-        return new BarEvent(time, open, low, high, close, bodyWidthPx);
+        return new BarEvent(time, volume, bodyWidthPx);
     }
 
-    public void update(double price) {
-        if (Double.isNaN(price)) {
-            return;
-        }
-
-        if (Double.isNaN(open)) {
-            open = 20;
-            low = 20;
-            high = price;
-        } else {
-            low = price;
-            high = price;
-        }
-        close = price;
+    public void update(int volume) {
+        this.volume += volume;
     }
 
     public void update(BarEvent nextBar) {
-        update(nextBar.open);
-        update(nextBar.low);
-        update(nextBar.high);
-        update(nextBar.close);
-    }
-
-    public void applyPips(double pips) {
-        open *= pips;
-        low *= pips;
-        high *= pips;
-        close *= pips;
+        update(nextBar.volume);
     }
 }

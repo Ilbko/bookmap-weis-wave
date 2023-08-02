@@ -55,8 +55,6 @@ public class IlbkoWeisWave implements
 
     private final Map<String, String> indicatorsFullNameToUserName = new HashMap<>();
 
-    private final Map<String, Double> pipsMap = new ConcurrentHashMap<>();
-
     private DataStructureInterface dataStructureInterface;
 
     private final BufferedImage tradeIcon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
@@ -100,7 +98,7 @@ public class IlbkoWeisWave implements
 
     @Override
     public void onInstrumentAdded(String alias, InstrumentInfo instrumentInfo) {
-        pipsMap.put(alias, instrumentInfo.pips);
+
     }
 
     @Override
@@ -120,8 +118,6 @@ public class IlbkoWeisWave implements
 
     @Override
     public void calculateValuesInRange(String indicatorName, String indicatorAlias, long t0, long intervalWidth, int intervalsNumber, CalculatedResultListener calculatedResultListener) {
-        Double pips = pipsMap.get(indicatorAlias);
-
         List<DataStructureInterface.TreeResponseInterval> result = dataStructureInterface.get(IlbkoWeisWave.class, TREE_NAME, t0,
                 intervalWidth, intervalsNumber, indicatorAlias, CUSTOM_EVENTS);
 
@@ -134,7 +130,6 @@ public class IlbkoWeisWave implements
                 value = new BarEvent(value);
 
                 value.setBodyWidthPx(bodyWidth);
-                value.applyPips(pips);
 
                 calculatedResultListener.provideResponse(value);
             } else {
@@ -147,8 +142,6 @@ public class IlbkoWeisWave implements
 
     @Override
     public OnlineValueCalculatorAdapter createOnlineValueCalculator(String indicatorName, String indicatorAlias, long l, Consumer<Object> consumer, InvalidateInterface invalidateInterface) {
-        Double pips = pipsMap.get(indicatorAlias);
-
         return new OnlineValueCalculatorAdapter() {
 
             int bodyWidth = MAX_BODY_WIDTH;
@@ -167,7 +160,6 @@ public class IlbkoWeisWave implements
 
                         event = new BarEvent(event);
                         event.setBodyWidthPx(bodyWidth);
-                        event.applyPips(pips);
 
                         consumer.accept(event);
                     }

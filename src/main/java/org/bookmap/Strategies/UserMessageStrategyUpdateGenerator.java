@@ -7,7 +7,6 @@ import velox.api.layer1.messages.indicators.StrategyUpdateGenerator;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerator {
@@ -47,12 +46,12 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
         if (barStartTime != bar.getTime()) {
             bar.setTime(time);
             consumer.accept(new CustomGeneratedEventAliased(bar, alias));
-            bar = new BarEvent(barStartTime, bar.getClose());
+            bar = new BarEvent(barStartTime, bar.getVolume());
             aliasToLastBar.put(alias, bar);
         }
 
         if (size != 0) {
-            bar.update(price);
+            bar.update(size);
         }
     }
 
@@ -73,7 +72,7 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
             if (barStartTime != bar.getTime()) {
                 bar.setTime(time);
                 consumer.accept(new CustomGeneratedEventAliased(bar, alias));
-                bar = new BarEvent(barStartTime, bar.getClose());
+                bar = new BarEvent(barStartTime, bar.getVolume());
                 entry.setValue(bar);
             }
         }
