@@ -46,12 +46,12 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
         if (barStartTime != bar.getTime()) {
             bar.setTime(time);
             consumer.accept(new CustomGeneratedEventAliased(bar, alias));
-            bar = new BarEvent(barStartTime, bar.getVolume());
+            bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose());
             aliasToLastBar.put(alias, bar);
         }
 
         if (size != 0) {
-            bar.update(size);
+            bar.update(size, price);
         }
     }
 
@@ -72,7 +72,7 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
             if (barStartTime != bar.getTime()) {
                 bar.setTime(time);
                 consumer.accept(new CustomGeneratedEventAliased(bar, alias));
-                bar = new BarEvent(barStartTime, bar.getVolume());
+                bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose());
                 entry.setValue(bar);
             }
         }

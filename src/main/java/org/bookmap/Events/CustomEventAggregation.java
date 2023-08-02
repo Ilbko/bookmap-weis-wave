@@ -13,6 +13,7 @@ public class CustomEventAggregation implements CustomEventAggregatble {
     public void aggregateAggregationWithAggregation(CustomGeneratedEvent aggregation, CustomGeneratedEvent value) {
         BarEvent aggregationEvent = (BarEvent) aggregation;
         BarEvent valueEvent = (BarEvent) value;
+
         aggregationEvent.update(valueEvent);
     }
 
@@ -20,6 +21,7 @@ public class CustomEventAggregation implements CustomEventAggregatble {
     public void aggregateAggregationWithValue(CustomGeneratedEvent aggregation1, CustomGeneratedEvent aggregation2) {
         BarEvent aggregationEvent1 = (BarEvent) aggregation1;
         BarEvent aggregationEvent2 = (BarEvent) aggregation2;
+
         aggregationEvent1.update(aggregationEvent2);
     }
 }

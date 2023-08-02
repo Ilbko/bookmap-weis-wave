@@ -15,27 +15,30 @@ public class BarEvent implements
     private static final long serialVersionUID = 1L;
 
     private long time;
-    private final double OPEN = 0;
+    private final double BAR_START = 0;
     private int volume;
+    private double open, close;
     private transient int bodyWidthPx;
 
     public BarEvent(long time) {
-        this(time, 0);
+        this(time, 0, Double.NaN);
     }
 
-    public BarEvent(long time, int volume) {
-        this(time, volume, -1);
+    public BarEvent(long time, int volume, double open) {
+        this(time, volume, open, open,-1);
     }
 
-    public BarEvent(long time, int volume, int bodyWidthPx) {
+    public BarEvent(long time, int volume, double open, double close, int bodyWidthPx) {
         super();
         this.time = time;
         this.volume = volume;
+        this.open = open;
+        this.close = close;
         this.bodyWidthPx = bodyWidthPx;
     }
 
     public BarEvent(BarEvent other) {
-        this(other.time, other.volume, other.bodyWidthPx);
+        this(other.time, other.volume, other.open, other.close, other.bodyWidthPx);
     }
 
     public void setBodyWidthPx(int bodyWidthPx) {
@@ -53,7 +56,7 @@ public class BarEvent implements
 
     @Override
     public double getMinY() {
-        return OPEN;
+        return BAR_START;
     }
 
     @Override
@@ -63,13 +66,29 @@ public class BarEvent implements
 
     @Override
     public double getValueY() {
-        return OPEN;
+        return BAR_START;
     }
 
     public int getVolume() {
         return volume;
     }
 
+    public double getClose() {
+        return close;
+    }
+
+    public double getMovement() {
+        return close - open;
+    }
+
+    public void setVolume(int volume) {
+        this.volume = volume;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + time + ": " + volume + "/" + open + "/" + close + "]";
+    }
     @Override
     public OnlineCalculatable.Marker makeMarker(Function<Double, Integer> yDataCoordinateToPixelFunction) {
         /* May return minimum value of an integer upon rewinding a replay and then throwing OutOfMemory at line 80 due
@@ -79,7 +98,7 @@ public class BarEvent implements
         if (top < 0)
             return null;
 
-        int bottom = yDataCoordinateToPixelFunction.apply(OPEN);
+        int bottom = yDataCoordinateToPixelFunction.apply(BAR_START);
 
         int imageHeight = top - bottom + 1;
         BufferedImage bufferedImage = new BufferedImage(bodyWidthPx, imageHeight, BufferedImage.TYPE_INT_ARGB);
@@ -101,14 +120,38 @@ public class BarEvent implements
 
     @Override
     public Object clone() {
-        return new BarEvent(time, volume, bodyWidthPx);
+        return new BarEvent(time, volume, open, close, bodyWidthPx);
     }
 
-    public void update(int volume) {
+    public void update(int volume, double price) {
         this.volume += volume;
+
+        if (Double.isNaN(open))
+            open = price;
+
+        close = price;
     }
+
+    /*public void updatePrice(double price) {
+        if (Double.isNaN(open))
+            open = price;
+
+        close = price;
+    }
+
+    public void updateVolume(int volume) {
+        this.volume += volume;
+    }*/
 
     public void update(BarEvent nextBar) {
-        update(nextBar.volume);
+        /*updateVolume(nextBar.volume);
+        updatePrice(nextBar.open);
+        updatePrice(nextBar.close);*/
+        update(nextBar.volume, nextBar.open);
+        update(nextBar.volume, nextBar.close);
+    }
+
+    public void swapMode() {
+        volume = 0;
     }
 }
