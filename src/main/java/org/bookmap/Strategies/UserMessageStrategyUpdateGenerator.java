@@ -5,8 +5,9 @@ import velox.api.layer1.data.TradeInfo;
 import velox.api.layer1.layers.strategies.interfaces.CustomGeneratedEventAliased;
 import velox.api.layer1.messages.indicators.StrategyUpdateGenerator;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerator {
@@ -16,7 +17,9 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
 
     private long time = 0;
 
-    private Map<String, BarEvent> aliasToLastBar = new HashMap<>();
+    private final Map<String, TrendDetectionForAlias> aliasToTrendDetection = new ConcurrentHashMap<>();
+
+    private static final int TREND_DETECTION_LENGTH = 2;
 
     public UserMessageStrategyUpdateGenerator(long candleIntervalNs) {
         this.candleIntervalNs = candleIntervalNs;
@@ -34,30 +37,62 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
 
     @Override
     public void onTrade(String alias, double price, int size, TradeInfo tradeInfo) {
-        BarEvent bar = aliasToLastBar.get(alias);
+        TrendDetectionForAlias trendDetection = aliasToTrendDetection.get(alias);
+        if (trendDetection == null) {
+            trendDetection = new TrendDetectionForAlias();
+            aliasToTrendDetection.put(alias, trendDetection);
+        }
 
         long barStartTime = getBarStartTime(time);
 
+        BarEvent bar = trendDetection.getLastBar();
+
         if (bar == null) {
             bar = new BarEvent(barStartTime);
-            aliasToLastBar.put(alias, bar);
+            trendDetection.setLastBar(bar);
+            trendDetection.setNsTimeUntilInterval(time);
         }
 
-        if (barStartTime != bar.getTime()) {
+        //Why if a setTime method is present?
+        /*if (barStartTime != bar.getTime()) {
             bar.setTime(time);
             consumer.accept(new CustomGeneratedEventAliased(bar, alias));
             bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose());
-            aliasToLastBar.put(alias, bar);
+            trendDetection.setLastBar(bar);
+        }*/
+
+        synchronized (trendDetection) {
+            if (trendDetection.getNsTimeUntilInterval() + candleIntervalNs <= barStartTime) {
+                trendDetection.setNsTimeUntilInterval(barStartTime);
+
+                AtomicInteger trendDetectionCounter = trendDetection.getTrendDetectionCounter();
+                //if (trendDetection.doIncrementCounter(bar.getMovement())) {
+                if (trendDetection.doIncrementCounter(bar.getOpen() - bar.getClose())) {
+                    if (trendDetectionCounter.incrementAndGet() == TREND_DETECTION_LENGTH) {
+                        trendDetectionCounter.set(0);
+
+                        trendDetection.changeTrendDetectionStrategy();
+                        bar.setVolume(bar.getVolume() - trendDetection.getLastVolumeAtInterval());
+                    }
+                } else {
+                    trendDetectionCounter.set(0);
+                }
+
+                consumer.accept(new CustomGeneratedEventAliased(bar, alias));
+                trendDetection.setLastVolumeAtInterval(bar.getVolume());
+            }
         }
 
         if (size != 0) {
-            bar.update(size, price);
+            bar.updatePrice(price);
         }
+
+        bar.updateVolume(size);
     }
 
     @Override
     public void onInstrumentRemoved(String alias) {
-        aliasToLastBar.remove(alias);
+        aliasToTrendDetection.remove(alias);
     }
 
     @Override
@@ -65,15 +100,15 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
         this.time = l;
 
         long barStartTime = getBarStartTime(time);
-        for (Map.Entry<String, BarEvent> entry : aliasToLastBar.entrySet()) {
+        for (Map.Entry<String, TrendDetectionForAlias> entry : aliasToTrendDetection.entrySet()) {
             String alias = entry.getKey();
-            BarEvent bar = entry.getValue();
+            BarEvent bar = entry.getValue().getLastBar();
 
             if (barStartTime != bar.getTime()) {
                 bar.setTime(time);
-                consumer.accept(new CustomGeneratedEventAliased(bar, alias));
-                bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose());
-                entry.setValue(bar);
+                //consumer.accept(new CustomGeneratedEventAliased(bar, alias));
+                bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose(), bar.getOpen());
+                entry.getValue().setLastBar(bar);
             }
         }
     }

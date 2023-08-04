@@ -1,17 +1,18 @@
 package org.bookmap.Events;
 
-import velox.api.layer1.common.Log;
 import velox.api.layer1.layers.strategies.interfaces.CustomGeneratedEvent;
 import velox.api.layer1.layers.strategies.interfaces.OnlineCalculatable;
 import velox.api.layer1.layers.strategies.interfaces.OnlineCalculatable.DataCoordinateMarker;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.Serial;
 import java.util.function.Function;
 
 public class BarEvent implements
         CustomGeneratedEvent,
         DataCoordinateMarker {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     private long time;
@@ -26,6 +27,10 @@ public class BarEvent implements
 
     public BarEvent(long time, int volume, double open) {
         this(time, volume, open, open,-1);
+    }
+
+    public BarEvent(long time, int volume, double open, double close) {
+        this(time, volume, open, close, -1);
     }
 
     public BarEvent(long time, int volume, double open, double close, int bodyWidthPx) {
@@ -71,6 +76,10 @@ public class BarEvent implements
 
     public int getVolume() {
         return volume;
+    }
+
+    public double getOpen() {
+        return open;
     }
 
     public double getClose() {
@@ -123,16 +132,11 @@ public class BarEvent implements
         return new BarEvent(time, volume, open, close, bodyWidthPx);
     }
 
-    public void update(int volume, double price) {
-        this.volume += volume;
+    public void updatePrice(double price) {
+        if (Double.isNaN(price)) {
+            return;
+        }
 
-        if (Double.isNaN(open))
-            open = price;
-
-        close = price;
-    }
-
-    /*public void updatePrice(double price) {
         if (Double.isNaN(open))
             open = price;
 
@@ -141,17 +145,11 @@ public class BarEvent implements
 
     public void updateVolume(int volume) {
         this.volume += volume;
-    }*/
-
-    public void update(BarEvent nextBar) {
-        /*updateVolume(nextBar.volume);
-        updatePrice(nextBar.open);
-        updatePrice(nextBar.close);*/
-        update(nextBar.volume, nextBar.open);
-        update(nextBar.volume, nextBar.close);
     }
 
-    public void swapMode() {
-        volume = 0;
+    public void update(BarEvent nextBar) {
+        updateVolume(nextBar.volume);
+        updatePrice(nextBar.open);
+        updatePrice(nextBar.close);
     }
 }

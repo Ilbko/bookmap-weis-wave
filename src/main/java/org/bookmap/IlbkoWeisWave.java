@@ -3,9 +3,6 @@ package org.bookmap;
 import org.bookmap.Colors.WaveColorScheme;
 import org.bookmap.Events.BarEvent;
 import org.bookmap.Events.CustomEventAggregation;
-import org.bookmap.Helpers.BearsStrategy;
-import org.bookmap.Helpers.BullsStrategy;
-import org.bookmap.Helpers.IMovementCalculable;
 import org.bookmap.Strategies.UserMessageStrategyUpdateGenerator;
 import velox.api.layer1.Layer1ApiAdminAdapter;
 import velox.api.layer1.Layer1ApiFinishable;
@@ -16,7 +13,6 @@ import velox.api.layer1.annotations.Layer1ApiVersionValue;
 import velox.api.layer1.annotations.Layer1Attachable;
 import velox.api.layer1.annotations.Layer1StrategyName;
 import velox.api.layer1.common.ListenableHelper;
-import velox.api.layer1.common.Log;
 import velox.api.layer1.data.InstrumentInfo;
 import velox.api.layer1.layers.strategies.interfaces.*;
 import velox.api.layer1.messages.GeneratedEventInfo;
@@ -31,9 +27,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 @Layer1Attachable
@@ -55,13 +49,6 @@ public class IlbkoWeisWave implements
     private static final int MAX_BODY_WIDTH = 30;
     private static final int MIN_BODY_WIDTH = 1;
 
-    private Map<String, AtomicInteger> instrumentPriceMovementMap = new ConcurrentHashMap<>();
-
-    private static final int TREND_DETECTION_LENGTH = 2;
-    private boolean isPriceRising = true;
-    private int removeVolume;
-    private IMovementCalculable movementStrategy = new BullsStrategy();
-
     private final Layer1ApiProvider provider;
 
     private final Map<String, String> indicatorsFullNameToUserName = new HashMap<>();
@@ -79,15 +66,6 @@ public class IlbkoWeisWave implements
         graphics.setColor(Color.BLUE);
         graphics.drawLine(0, 0, 15, 15);
         graphics.drawLine(15, 0, 0, 15);
-    }
-
-    public void changeTrendDetectionStrategy() {
-        isPriceRising = !isPriceRising;
-
-        if (isPriceRising)
-            movementStrategy = new BullsStrategy();
-        else
-            movementStrategy = new BearsStrategy();
     }
 
     @Override
@@ -118,7 +96,7 @@ public class IlbkoWeisWave implements
 
     @Override
     public void onInstrumentAdded(String alias, InstrumentInfo instrumentInfo) {
-        instrumentPriceMovementMap.put(alias, new AtomicInteger(0));
+
     }
 
     @Override
@@ -142,7 +120,6 @@ public class IlbkoWeisWave implements
                 intervalWidth, intervalsNumber, indicatorAlias, CUSTOM_EVENTS);
 
         int bodyWidth = getBodyWidth(intervalWidth);
-        this.removeVolume = 0;
 
         for (int i = 1; i <= intervalsNumber; i++) {
 
@@ -182,20 +159,6 @@ public class IlbkoWeisWave implements
                         event = new BarEvent(event);
                         event.setBodyWidthPx(bodyWidth);
 
-                        AtomicInteger trendDetectionCounter = instrumentPriceMovementMap.get(aliasedEvent.alias);
-                        if (movementStrategy.doIncrementCounter(event.getMovement())) {
-                            removeVolume = event.getVolume();
-                            if (trendDetectionCounter.incrementAndGet() == TREND_DETECTION_LENGTH) {
-                                trendDetectionCounter.set(0);
-                                removeVolume = event.getVolume();
-
-                                changeTrendDetectionStrategy();
-                                //event.swapMode();
-                            }
-                        } else
-                            trendDetectionCounter.set(0);
-
-                        event.setVolume(event.getVolume() - removeVolume);
                         consumer.accept(event);
                     }
                 }
