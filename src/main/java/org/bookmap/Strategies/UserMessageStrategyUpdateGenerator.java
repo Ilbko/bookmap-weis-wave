@@ -78,6 +78,7 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
                     trendDetectionCounter.set(0);
                 }
 
+                bar.changeBarColor(trendDetection.getColorFromStrategy());
                 consumer.accept(new CustomGeneratedEventAliased(bar, alias));
                 trendDetection.setLastVolumeAtInterval(bar.getVolume());
             }
@@ -107,7 +108,7 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
             if (barStartTime != bar.getTime()) {
                 bar.setTime(time);
                 //consumer.accept(new CustomGeneratedEventAliased(bar, alias));
-                bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose(), bar.getOpen());
+                bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose(), bar.getOpen(), bar.getBarColor());
                 entry.getValue().setLastBar(bar);
             }
         }

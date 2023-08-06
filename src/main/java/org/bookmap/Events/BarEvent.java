@@ -19,31 +19,33 @@ public class BarEvent implements
     private final double BAR_START = 0;
     private int volume;
     private double open, close;
+    private Color barColor;
     private transient int bodyWidthPx;
 
     public BarEvent(long time) {
-        this(time, 0, Double.NaN);
+        this(time, 0, Double.NaN, null);
     }
 
-    public BarEvent(long time, int volume, double open) {
-        this(time, volume, open, open,-1);
+    public BarEvent(long time, int volume, double open, Color barColor) {
+        this(time, volume, open, open, barColor, -1);
     }
 
-    public BarEvent(long time, int volume, double open, double close) {
-        this(time, volume, open, close, -1);
+    public BarEvent(long time, int volume, double open, double close, Color barColor) {
+        this(time, volume, open, close, barColor, -1);
     }
 
-    public BarEvent(long time, int volume, double open, double close, int bodyWidthPx) {
+    public BarEvent(long time, int volume, double open, double close, Color barColor, int bodyWidthPx) {
         super();
         this.time = time;
         this.volume = volume;
         this.open = open;
         this.close = close;
+        this.barColor = barColor;
         this.bodyWidthPx = bodyWidthPx;
     }
 
     public BarEvent(BarEvent other) {
-        this(other.time, other.volume, other.open, other.close, other.bodyWidthPx);
+        this(other.time, other.volume, other.open, other.close, other.barColor, other.bodyWidthPx);
     }
 
     public void setBodyWidthPx(int bodyWidthPx) {
@@ -118,7 +120,7 @@ public class BarEvent implements
         graphics.setBackground(new Color(0, 0, 0, 0));
         graphics.clearRect(0, 0, bufferedImage.getWidth(), bufferedImage.getHeight());
 
-        graphics.setColor(Color.GREEN);
+        graphics.setColor(barColor);
         graphics.fillRect(0, 0, bodyWidthPx, top);
 
         graphics.dispose();
@@ -129,7 +131,7 @@ public class BarEvent implements
 
     @Override
     public Object clone() {
-        return new BarEvent(time, volume, open, close, bodyWidthPx);
+        return new BarEvent(time, volume, open, close, barColor, bodyWidthPx);
     }
 
     public void updatePrice(double price) {
@@ -147,9 +149,23 @@ public class BarEvent implements
         this.volume += volume;
     }
 
+    public void setBarColor(Color barColor) {
+        if (this.barColor == null)
+            this.barColor = barColor;
+    }
+
+    public void changeBarColor(Color barColor) {
+        this.barColor = barColor;
+    }
+
+    public Color getBarColor() {
+        return barColor;
+    }
+
     public void update(BarEvent nextBar) {
         updateVolume(nextBar.volume);
         updatePrice(nextBar.open);
         updatePrice(nextBar.close);
+        setBarColor(nextBar.barColor);
     }
 }

@@ -5,6 +5,7 @@ import org.bookmap.Helpers.BearsStrategy;
 import org.bookmap.Helpers.BullsStrategy;
 import org.bookmap.Helpers.IMovementCalculable;
 
+import java.awt.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TrendDetectionForAlias {
@@ -58,5 +59,9 @@ public class TrendDetectionForAlias {
             movementStrategy = new BearsStrategy();
         else
             movementStrategy = new BullsStrategy();
+    }
+
+    public Color getColorFromStrategy() {
+        return movementStrategy.getStrategyColor();
     }
 }

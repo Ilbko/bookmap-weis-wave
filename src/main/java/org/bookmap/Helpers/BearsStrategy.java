@@ -1,11 +1,15 @@
 package org.bookmap.Helpers;
 
+import java.awt.*;
+
 public class BearsStrategy implements IMovementCalculable {
     @Override
     public boolean doIncrementCounter(double movement) {
-        if (movement > 0)
-            return true;
+        return movement > 0;
+    }
 
-        return false;
+    @Override
+    public Color getStrategyColor() {
+        return Color.RED;
     }
 }

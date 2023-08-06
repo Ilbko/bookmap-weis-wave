@@ -41,7 +41,7 @@ public class IlbkoWeisWave implements
     private static final CustomEventAggregatble BAR_EVENTS_AGGREGATOR = new CustomEventAggregation();
     private static final String INDICATOR_NAME_BARS_BOTTOM = "Bars: bottom panel";
 
-    private static final long CANDLE_INTERVAL_NS = TimeUnit.SECONDS.toNanos(30);
+    private static final long CANDLE_INTERVAL_NS = TimeUnit.SECONDS.toNanos(60);
 
     private static final String TREE_NAME = "Bars";
     private static final Class<?>[] CUSTOM_EVENTS = new Class<?>[] { BarEvent.class };
