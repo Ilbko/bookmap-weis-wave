@@ -7,7 +7,7 @@ import java.awt.*;
 
 public class WaveColorScheme implements IndicatorColorScheme {
     private static final String INDICATOR_LINE_COLOR_NAME = "Trade markers line";
-    private static final Color INDICATOR_LINE_DEFAULT_COLOR = Color.RED;
+    private static final Color INDICATOR_LINE_DEFAULT_COLOR = Color.WHITE;
 
     @Override
     public ColorDescription[] getColors() {

@@ -3,11 +3,10 @@ package org.bookmap;
 import org.bookmap.Colors.WaveColorScheme;
 import org.bookmap.Events.BarEvent;
 import org.bookmap.Events.CustomEventAggregation;
+import org.bookmap.Settings.SettingsPanel;
+import org.bookmap.Settings.WeisWaveSettings;
 import org.bookmap.Strategies.UserMessageStrategyUpdateGenerator;
-import velox.api.layer1.Layer1ApiAdminAdapter;
-import velox.api.layer1.Layer1ApiFinishable;
-import velox.api.layer1.Layer1ApiInstrumentListener;
-import velox.api.layer1.Layer1ApiProvider;
+import velox.api.layer1.*;
 import velox.api.layer1.annotations.Layer1ApiVersion;
 import velox.api.layer1.annotations.Layer1ApiVersionValue;
 import velox.api.layer1.annotations.Layer1Attachable;
@@ -18,10 +17,9 @@ import velox.api.layer1.layers.strategies.interfaces.*;
 import velox.api.layer1.messages.GeneratedEventInfo;
 import velox.api.layer1.messages.Layer1ApiUserMessageAddStrategyUpdateGenerator;
 import velox.api.layer1.messages.UserMessageLayersChainCreatedTargeted;
-import velox.api.layer1.messages.indicators.DataStructureInterface;
-import velox.api.layer1.messages.indicators.IndicatorLineStyle;
-import velox.api.layer1.messages.indicators.Layer1ApiDataInterfaceRequestMessage;
-import velox.api.layer1.messages.indicators.Layer1ApiUserMessageModifyIndicator;
+import velox.api.layer1.messages.indicators.*;
+import velox.api.layer1.settings.Layer1ConfigSettingsInterface;
+import velox.gui.StrategyPanel;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -37,16 +35,23 @@ public class IlbkoWeisWave implements
         Layer1ApiFinishable,
         Layer1ApiAdminAdapter,
         Layer1ApiInstrumentListener,
-        OnlineCalculatable {
+        OnlineCalculatable,
+        Layer1ConfigSettingsInterface,
+        Layer1CustomPanelsGetter,
+        SettingsPanel.SettingsPanelCallback
+{
     private static final CustomEventAggregatble BAR_EVENTS_AGGREGATOR = new CustomEventAggregation();
+
     private static final String INDICATOR_NAME_BARS_BOTTOM = "Bars: bottom panel";
 
     private static final long CANDLE_INTERVAL_NS = TimeUnit.SECONDS.toNanos(60);
 
     private static final String TREE_NAME = "Bars";
+
     private static final Class<?>[] CUSTOM_EVENTS = new Class<?>[] { BarEvent.class };
 
     private static final int MAX_BODY_WIDTH = 30;
+
     private static final int MIN_BODY_WIDTH = 1;
 
     private final Layer1ApiProvider provider;
@@ -55,12 +60,24 @@ public class IlbkoWeisWave implements
 
     private DataStructureInterface dataStructureInterface;
 
+    private SettingsAccess settingsAccess;
+    private Map<String, WeisWaveSettings> settingsMap = new HashMap<>();
+
+    private SettingsPanel settingsPanel;
+    private Object locker = new Object();
+
+    private int trendDetectionLength = 2;
+    private long candleIntervalNs;
+
     private final BufferedImage tradeIcon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
 
     public IlbkoWeisWave(Layer1ApiProvider provider) {
         this.provider = provider;
 
         ListenableHelper.addListeners(provider, this);
+
+        settingsPanel = new SettingsPanel(this);
+        candleIntervalNs = TimeUnit.SECONDS.toNanos(60);
 
         Graphics graphics = tradeIcon.getGraphics();
         graphics.setColor(Color.BLUE);
@@ -85,7 +102,7 @@ public class IlbkoWeisWave implements
                 TREE_NAME,
                 isAdd,
                 true,
-                new UserMessageStrategyUpdateGenerator(CANDLE_INTERVAL_NS),
+                new UserMessageStrategyUpdateGenerator(candleIntervalNs, trendDetectionLength),
                 new GeneratedEventInfo[] {
                         new GeneratedEventInfo(
                                 BarEvent.class,
@@ -141,7 +158,6 @@ public class IlbkoWeisWave implements
     @Override
     public OnlineValueCalculatorAdapter createOnlineValueCalculator(String indicatorName, String indicatorAlias, long l, Consumer<Object> consumer, InvalidateInterface invalidateInterface) {
         return new OnlineValueCalculatorAdapter() {
-
             int bodyWidth = MAX_BODY_WIDTH;
 
             @Override
@@ -199,6 +215,7 @@ public class IlbkoWeisWave implements
     }
 
     public int getBodyWidth(long intervalWidth) {
+        //long bodyWidth = CANDLE_INTERVAL_NS / intervalWidth;
         long bodyWidth = CANDLE_INTERVAL_NS / intervalWidth;
         bodyWidth = Math.max(bodyWidth, MIN_BODY_WIDTH);
         bodyWidth = Math.min(bodyWidth, MAX_BODY_WIDTH);
@@ -212,5 +229,44 @@ public class IlbkoWeisWave implements
         } else {
             return null;
         }
+    }
+
+    @Override
+    public void acceptSettingsInterface(SettingsAccess settingsAccess) {
+        this.settingsAccess = settingsAccess;
+    }
+
+    @Override
+    public StrategyPanel[] getCustomGuiFor(String alias, String indicatorName) {
+        return new StrategyPanel[] { this.settingsPanel };
+    }
+
+    private WeisWaveSettings getSettingsFor(String alias) {
+        synchronized (locker) {
+            WeisWaveSettings settings = settingsMap.get(alias);
+            if (settings == null) {
+                settings = (WeisWaveSettings) settingsAccess.getSettings(alias, INDICATOR_NAME_BARS_BOTTOM, WeisWaveSettings.class);
+                settingsMap.put(alias, settings);
+            }
+
+            return settings;
+        }
+    }
+
+    private void settingsChanged(String alias, WeisWaveSettings settings) {
+        synchronized (locker) {
+            settingsAccess.setSettings(alias, INDICATOR_NAME_BARS_BOTTOM, settings, WeisWaveSettings.class);
+        }
+    }
+
+    @Override
+    public void onSettingsUpdate(WeisWaveSettings weisWaveSettings) {
+        this.trendDetectionLength = weisWaveSettings.getTrendDetectionLength();
+        this.candleIntervalNs = TimeUnit.SECONDS.toNanos(weisWaveSettings.getSeconds());
+        this.finish();
+        //getGeneratorMessage(false);
+        provider.sendUserMessage(new Layer1ApiDataInterfaceRequestMessage(dataStructureInterface -> this.dataStructureInterface = dataStructureInterface));
+        addIndicator();
+        provider.sendUserMessage(getGeneratorMessage(true));
     }
 }

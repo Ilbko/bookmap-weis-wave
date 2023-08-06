@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 
 public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerator {
     private final long candleIntervalNs;
+    private final int trendDetectionLength;
 
     private Consumer<CustomGeneratedEventAliased> consumer;
 
@@ -19,10 +20,11 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
 
     private final Map<String, TrendDetectionForAlias> aliasToTrendDetection = new ConcurrentHashMap<>();
 
-    private static final int TREND_DETECTION_LENGTH = 2;
+    //private static final int TREND_DETECTION_LENGTH = 2;
 
-    public UserMessageStrategyUpdateGenerator(long candleIntervalNs) {
+    public UserMessageStrategyUpdateGenerator(long candleIntervalNs, int trendDetectionLength) {
         this.candleIntervalNs = candleIntervalNs;
+        this.trendDetectionLength = trendDetectionLength;
     }
 
     @Override
@@ -79,7 +81,7 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
 
                 AtomicInteger trendDetectionCounter = trendDetection.getTrendDetectionCounter();
                 if (trendDetection.doIncrementCounter(bar.getMovement())) {
-                    if (trendDetectionCounter.incrementAndGet() == TREND_DETECTION_LENGTH) {
+                    if (trendDetectionCounter.incrementAndGet() == trendDetectionLength) {
                         trendDetectionCounter.set(0);
 
                         trendDetection.changeTrendDetectionStrategy();
