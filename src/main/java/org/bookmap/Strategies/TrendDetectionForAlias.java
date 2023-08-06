@@ -10,8 +10,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class TrendDetectionForAlias {
     private BarEvent lastBar;
-    private long nsTimeUntilInterval;
-
     private final AtomicInteger trendDetectionCounter;
     private IMovementCalculable movementStrategy;
 
@@ -26,20 +24,12 @@ public class TrendDetectionForAlias {
         return lastBar;
     }
 
-    public long getNsTimeUntilInterval() {
-        return nsTimeUntilInterval;
-    }
-
     public AtomicInteger getTrendDetectionCounter() {
         return trendDetectionCounter;
     }
 
     public void setLastBar(BarEvent lastBar) {
         this.lastBar = lastBar;
-    }
-
-    public void setNsTimeUntilInterval(long nsTimeUntilInterval) {
-        this.nsTimeUntilInterval = nsTimeUntilInterval;
     }
 
     public int getLastVolumeAtInterval() {

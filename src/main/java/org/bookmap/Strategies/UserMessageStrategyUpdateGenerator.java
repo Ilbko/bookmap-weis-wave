@@ -50,38 +50,6 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
         if (bar == null) {
             bar = new BarEvent(barStartTime);
             trendDetection.setLastBar(bar);
-            trendDetection.setNsTimeUntilInterval(time);
-        }
-
-        //Why if a setTime method is present?
-        /*if (barStartTime != bar.getTime()) {
-            bar.setTime(time);
-            consumer.accept(new CustomGeneratedEventAliased(bar, alias));
-            bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose());
-            trendDetection.setLastBar(bar);
-        }*/
-
-        synchronized (trendDetection) {
-            if (trendDetection.getNsTimeUntilInterval() + candleIntervalNs <= barStartTime) {
-                trendDetection.setNsTimeUntilInterval(barStartTime);
-
-                AtomicInteger trendDetectionCounter = trendDetection.getTrendDetectionCounter();
-                //if (trendDetection.doIncrementCounter(bar.getMovement())) {
-                if (trendDetection.doIncrementCounter(bar.getOpen() - bar.getClose())) {
-                    if (trendDetectionCounter.incrementAndGet() == TREND_DETECTION_LENGTH) {
-                        trendDetectionCounter.set(0);
-
-                        trendDetection.changeTrendDetectionStrategy();
-                        bar.setVolume(bar.getVolume() - trendDetection.getLastVolumeAtInterval());
-                    }
-                } else {
-                    trendDetectionCounter.set(0);
-                }
-
-                bar.changeBarColor(trendDetection.getColorFromStrategy());
-                consumer.accept(new CustomGeneratedEventAliased(bar, alias));
-                trendDetection.setLastVolumeAtInterval(bar.getVolume());
-            }
         }
 
         if (size != 0) {
@@ -103,11 +71,28 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
         long barStartTime = getBarStartTime(time);
         for (Map.Entry<String, TrendDetectionForAlias> entry : aliasToTrendDetection.entrySet()) {
             String alias = entry.getKey();
-            BarEvent bar = entry.getValue().getLastBar();
+            TrendDetectionForAlias trendDetection = entry.getValue();
+            BarEvent bar = trendDetection.getLastBar();
 
             if (barStartTime != bar.getTime()) {
                 bar.setTime(time);
-                //consumer.accept(new CustomGeneratedEventAliased(bar, alias));
+
+                AtomicInteger trendDetectionCounter = trendDetection.getTrendDetectionCounter();
+                if (trendDetection.doIncrementCounter(bar.getMovement())) {
+                    if (trendDetectionCounter.incrementAndGet() == TREND_DETECTION_LENGTH) {
+                        trendDetectionCounter.set(0);
+
+                        trendDetection.changeTrendDetectionStrategy();
+                        bar.setVolume(bar.getVolume() - trendDetection.getLastVolumeAtInterval());
+                    }
+                } else {
+                    trendDetectionCounter.set(0);
+                }
+
+                bar.changeBarColor(trendDetection.getColorFromStrategy());
+                trendDetection.setLastVolumeAtInterval(bar.getVolume());
+
+                consumer.accept(new CustomGeneratedEventAliased(bar, alias));
                 bar = new BarEvent(barStartTime, bar.getVolume(), bar.getClose(), bar.getOpen(), bar.getBarColor());
                 entry.getValue().setLastBar(bar);
             }
