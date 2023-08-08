@@ -56,6 +56,8 @@ public class IlbkoWeisWave implements
 
     private final Layer1ApiProvider provider;
 
+    private final Map<String, Double> sizeMultiplierMap = new HashMap<>();
+
     private final Map<String, String> indicatorsFullNameToUserName = new HashMap<>();
 
     private DataStructureInterface dataStructureInterface;
@@ -113,7 +115,7 @@ public class IlbkoWeisWave implements
 
     @Override
     public void onInstrumentAdded(String alias, InstrumentInfo instrumentInfo) {
-
+        sizeMultiplierMap.put(alias, instrumentInfo.sizeMultiplier);
     }
 
     @Override
@@ -144,6 +146,7 @@ public class IlbkoWeisWave implements
             if (value != null) {
                 value = new BarEvent(value);
 
+                value.applySizeMultiplier(sizeMultiplierMap.get(indicatorAlias));
                 value.setBodyWidthPx(bodyWidth);
 
                 calculatedResultListener.provideResponse(value);
@@ -171,8 +174,9 @@ public class IlbkoWeisWave implements
                     CustomGeneratedEventAliased aliasedEvent = (CustomGeneratedEventAliased) data;
                     if (indicatorAlias.equals(aliasedEvent.alias) && aliasedEvent.event instanceof BarEvent) {
                         BarEvent event = (BarEvent)aliasedEvent.event;
-
                         event = new BarEvent(event);
+
+                        event.applySizeMultiplier(sizeMultiplierMap.get(indicatorAlias));
                         event.setBodyWidthPx(bodyWidth);
 
                         consumer.accept(event);

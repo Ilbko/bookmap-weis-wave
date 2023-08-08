@@ -168,4 +168,8 @@ public class BarEvent implements
         updatePrice(nextBar.close);
         setBarColor(nextBar.barColor);
     }
+
+    public void applySizeMultiplier(double multiplier) {
+        this.volume /= multiplier;
+    }
 }
