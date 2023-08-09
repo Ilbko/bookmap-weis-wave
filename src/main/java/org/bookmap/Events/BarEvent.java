@@ -7,6 +7,8 @@ import velox.api.layer1.layers.strategies.interfaces.OnlineCalculatable.DataCoor
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.Serial;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 public class BarEvent implements
@@ -21,6 +23,8 @@ public class BarEvent implements
     private double open, close;
     private Color barColor;
     private transient int bodyWidthPx;
+    private static final int CACHE_MAX_SIZE = 100;
+    private static Map<Integer, BufferedImage> barsCache = new HashMap<>();
 
     public BarEvent(long time) {
         this(time, 0, Double.NaN, null);
@@ -112,7 +116,16 @@ public class BarEvent implements
         int bottom = yDataCoordinateToPixelFunction.apply(BAR_START);
 
         int imageHeight = top - bottom + 1;
-        BufferedImage bufferedImage = new BufferedImage(bodyWidthPx, imageHeight, BufferedImage.TYPE_INT_ARGB);
+
+        BufferedImage bufferedImage = barsCache.get(imageHeight);
+        if (bufferedImage == null) {
+            if (barsCache.size() >= CACHE_MAX_SIZE)
+                barsCache.clear();
+
+            bufferedImage = new BufferedImage(bodyWidthPx, imageHeight, BufferedImage.TYPE_INT_ARGB);
+            barsCache.put(imageHeight, bufferedImage);
+        }
+        //BufferedImage bufferedImage = new BufferedImage(bodyWidthPx, imageHeight, BufferedImage.TYPE_INT_ARGB);
 
         int imageCenterX = bufferedImage.getWidth() / 2;
 
@@ -171,5 +184,9 @@ public class BarEvent implements
 
     public void applySizeMultiplier(double multiplier) {
         this.volume /= multiplier;
+    }
+
+    public static void clearCache() {
+        barsCache.clear();
     }
 }

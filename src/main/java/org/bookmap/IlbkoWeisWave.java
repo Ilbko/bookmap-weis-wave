@@ -193,11 +193,15 @@ public class IlbkoWeisWave implements
         if (data.getClass() == UserMessageLayersChainCreatedTargeted.class) {
             UserMessageLayersChainCreatedTargeted message = (UserMessageLayersChainCreatedTargeted) data;
             if (message.targetClass == getClass()) {
-                provider.sendUserMessage(new Layer1ApiDataInterfaceRequestMessage(dataStructureInterface -> this.dataStructureInterface = dataStructureInterface));
-                addIndicator();
-                provider.sendUserMessage(getGeneratorMessage(true));
+                addAndActivateIndicator();
             }
         }
+    }
+
+    private void addAndActivateIndicator() {
+        provider.sendUserMessage(new Layer1ApiDataInterfaceRequestMessage(dataStructureInterface -> this.dataStructureInterface = dataStructureInterface));
+        addIndicator();
+        provider.sendUserMessage(getGeneratorMessage(true));
     }
 
     private Layer1ApiUserMessageModifyIndicator getUserMessageAdd() {
@@ -268,6 +272,7 @@ public class IlbkoWeisWave implements
     private void settingsChanged(String alias, WeisWaveSettings weisWaveSettings) {
         synchronized (locker) {
             settingsAccess.setSettings(alias, INDICATOR_NAME_BARS_BOTTOM, weisWaveSettings, WeisWaveSettings.class);
+            BarEvent.clearCache();
         }
     }
 
@@ -275,11 +280,9 @@ public class IlbkoWeisWave implements
     public void onSettingsUpdate(String alias, WeisWaveSettings weisWaveSettings) {
         this.trendDetectionLength = weisWaveSettings.getTrendDetectionLength();
         this.candleIntervalNs = TimeUnit.SECONDS.toNanos(weisWaveSettings.getSeconds());
-        this.finish();
 
-        provider.sendUserMessage(new Layer1ApiDataInterfaceRequestMessage(dataStructureInterface -> this.dataStructureInterface = dataStructureInterface));
-        addIndicator();
-        provider.sendUserMessage(getGeneratorMessage(true));
+        finish();
+        addAndActivateIndicator();
 
         settingsChanged(alias, weisWaveSettings);
         settingsMap.put(alias, weisWaveSettings);

@@ -20,7 +20,6 @@ public class UserMessageStrategyUpdateGenerator implements StrategyUpdateGenerat
 
     private final Map<String, TrendDetectionForAlias> aliasToTrendDetection = new ConcurrentHashMap<>();
 
-    //private static final int TREND_DETECTION_LENGTH = 2;
 
     public UserMessageStrategyUpdateGenerator(long candleIntervalNs, int trendDetectionLength) {
         this.candleIntervalNs = candleIntervalNs;
