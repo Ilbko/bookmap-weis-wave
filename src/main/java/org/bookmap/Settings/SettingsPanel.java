@@ -4,10 +4,12 @@ import velox.gui.StrategyPanel;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.stream.IntStream;
 
 public class SettingsPanel extends StrategyPanel {
     private final JComboBox<TimeInterval> timeIntervalsComboBox = new JComboBox<>();
     private final JSpinner trendDetectionLengthSpinner = new JSpinner();
+    private final String instrumentAlias;
 
     private final TimeInterval[] timeIntervals = {
             new TimeInterval("5 sec", 5),
@@ -22,21 +24,30 @@ public class SettingsPanel extends StrategyPanel {
             new TimeInterval("15 min", 900),
             new TimeInterval("30 min", 1800)};
 
+    /*private final TreeMap<Long, String> timeIntervals = new TreeMap<>() {{
+        put(5L, "5 sec");
+        put(10L, "10 sec");
+        put(15L, "15 sec");
+        put(30L, "30 sec");
+        put(60L, "1 min");
+    }};*/
+
     public interface SettingsPanelCallback {
-        void onSettingsUpdate(WeisWaveSettings weisWaveSettings);
+        void onSettingsUpdate(String alias, WeisWaveSettings weisWaveSettings);
     }
 
-    public SettingsPanel(SettingsPanelCallback callback) {
+    public SettingsPanel(SettingsPanelCallback callback, String alias, WeisWaveSettings settings) {
         super("Settings");
         GridBagLayout gridBagLayout = new GridBagLayout();
+        this.instrumentAlias = alias;
 
         setLayout(gridBagLayout);
 
-        initTimeIntervalsComboBox(callback);
-        initTrendDetectionLengthSpinner(callback);
+        initTimeIntervalsComboBox(callback, settings.getSeconds());
+        initTrendDetectionLengthSpinner(callback, settings.getTrendDetectionLength());
     }
 
-    private void initTimeIntervalsComboBox(SettingsPanelCallback callback) {
+    private void initTimeIntervalsComboBox(SettingsPanelCallback callback, long seconds) {
         JLabel timeIntervalsLabel = new JLabel("Interval: ");
         GridBagConstraints timeIntervalsConstraints = new GridBagConstraints();
         timeIntervalsConstraints.anchor = GridBagConstraints.WEST;
@@ -46,19 +57,22 @@ public class SettingsPanel extends StrategyPanel {
         add(timeIntervalsLabel, timeIntervalsConstraints);
 
         timeIntervalsComboBox.setModel(new DefaultComboBoxModel<>(timeIntervals));
+        /*for (Map.Entry value : timeIntervals.entrySet()) {
+            timeIntervalsComboBox.addItem((TimeInterval) value.getValue());
+        }*/
         GridBagConstraints timeIntervalsComboBoxConstraints = new GridBagConstraints();
         timeIntervalsComboBoxConstraints.anchor = GridBagConstraints.EAST;
         timeIntervalsComboBoxConstraints.fill = GridBagConstraints.HORIZONTAL;
         timeIntervalsComboBoxConstraints.insets = new Insets(0, 0, 5, 0);
         timeIntervalsComboBoxConstraints.gridx = 1;
         timeIntervalsComboBoxConstraints.gridy = 0;
-        timeIntervalsComboBox.setSelectedIndex(4);
-        timeIntervalsComboBox.addItemListener(e -> callback.onSettingsUpdate(getCurrentWeisWaveSettings()));
+        timeIntervalsComboBox.setSelectedIndex(IntStream.range(0, timeIntervals.length).filter(i -> timeIntervals[i].seconds() == seconds).findFirst().orElse(0));
+        timeIntervalsComboBox.addItemListener(e -> callback.onSettingsUpdate(instrumentAlias, getCurrentWeisWaveSettings()));
 
         add(timeIntervalsComboBox, timeIntervalsComboBoxConstraints);
     }
 
-    private void initTrendDetectionLengthSpinner(SettingsPanelCallback callback) {
+    private void initTrendDetectionLengthSpinner(SettingsPanelCallback callback, int trendDetectionLength) {
         JLabel trendDetectionLengthLabel = new JLabel("Trend detection length: ");
         trendDetectionLengthLabel.setToolTipText("Set how many closing prices of a set time interval " +
                 "are required to be considered a change of a trend.");
@@ -69,14 +83,14 @@ public class SettingsPanel extends StrategyPanel {
         trendDetectionLengthConstraints.gridy = 1;
         add(trendDetectionLengthLabel, trendDetectionLengthConstraints);
 
-        trendDetectionLengthSpinner.setModel(new SpinnerNumberModel(2, 1, 5, 1));
+        trendDetectionLengthSpinner.setModel(new SpinnerNumberModel(trendDetectionLength, 1, 5, 1));
         GridBagConstraints trendDetectionLengthSpinnerConstraints = new GridBagConstraints();
         trendDetectionLengthSpinnerConstraints.anchor = GridBagConstraints.EAST;
         trendDetectionLengthSpinnerConstraints.fill = GridBagConstraints.HORIZONTAL;
         trendDetectionLengthSpinnerConstraints.insets = new Insets(0, 0, 5, 0);
         trendDetectionLengthSpinnerConstraints.gridx = 1;
         trendDetectionLengthSpinnerConstraints.gridy = 1;
-        trendDetectionLengthSpinner.addChangeListener(e -> callback.onSettingsUpdate(getCurrentWeisWaveSettings()));
+        trendDetectionLengthSpinner.addChangeListener(e -> callback.onSettingsUpdate(instrumentAlias, getCurrentWeisWaveSettings()));
 
         add(trendDetectionLengthSpinner, trendDetectionLengthSpinnerConstraints);
     }

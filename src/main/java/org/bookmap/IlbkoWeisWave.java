@@ -36,15 +36,13 @@ public class IlbkoWeisWave implements
         Layer1ApiAdminAdapter,
         Layer1ApiInstrumentListener,
         OnlineCalculatable,
-        Layer1ConfigSettingsInterface,
         Layer1CustomPanelsGetter,
+        Layer1ConfigSettingsInterface,
         SettingsPanel.SettingsPanelCallback
 {
     private static final CustomEventAggregatble BAR_EVENTS_AGGREGATOR = new CustomEventAggregation();
 
     private static final String INDICATOR_NAME_BARS_BOTTOM = "Bars: bottom panel";
-
-    private static final long CANDLE_INTERVAL_NS = TimeUnit.SECONDS.toNanos(60);
 
     private static final String TREE_NAME = "Bars";
 
@@ -65,10 +63,9 @@ public class IlbkoWeisWave implements
     private SettingsAccess settingsAccess;
     private Map<String, WeisWaveSettings> settingsMap = new HashMap<>();
 
-    private SettingsPanel settingsPanel;
     private Object locker = new Object();
 
-    private int trendDetectionLength = 2;
+    private int trendDetectionLength;
     private long candleIntervalNs;
 
     private final BufferedImage tradeIcon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
@@ -78,7 +75,7 @@ public class IlbkoWeisWave implements
 
         ListenableHelper.addListeners(provider, this);
 
-        settingsPanel = new SettingsPanel(this);
+        //settingsPanel = new SettingsPanel(this);
         candleIntervalNs = TimeUnit.SECONDS.toNanos(60);
 
         Graphics graphics = tradeIcon.getGraphics();
@@ -116,6 +113,11 @@ public class IlbkoWeisWave implements
     @Override
     public void onInstrumentAdded(String alias, InstrumentInfo instrumentInfo) {
         sizeMultiplierMap.put(alias, instrumentInfo.sizeMultiplier);
+        if (settingsMap.isEmpty()) {
+            WeisWaveSettings settings = getSettingsFor(alias);
+            this.trendDetectionLength = settings.getTrendDetectionLength();
+            this.candleIntervalNs = TimeUnit.SECONDS.toNanos(settings.getSeconds());
+        }
     }
 
     @Override
@@ -220,7 +222,7 @@ public class IlbkoWeisWave implements
 
     public int getBodyWidth(long intervalWidth) {
         //long bodyWidth = CANDLE_INTERVAL_NS / intervalWidth;
-        long bodyWidth = CANDLE_INTERVAL_NS / intervalWidth;
+        long bodyWidth = candleIntervalNs / intervalWidth;
         bodyWidth = Math.max(bodyWidth, MIN_BODY_WIDTH);
         bodyWidth = Math.min(bodyWidth, MAX_BODY_WIDTH);
         return (int) bodyWidth;
@@ -236,13 +238,15 @@ public class IlbkoWeisWave implements
     }
 
     @Override
-    public void acceptSettingsInterface(SettingsAccess settingsAccess) {
-        this.settingsAccess = settingsAccess;
+    public StrategyPanel[] getCustomGuiFor(String alias, String indicatorName) {
+        //this.settingsPanel.setCurrentInstrumentAlias(alias);
+
+        return new StrategyPanel[] { new SettingsPanel(this, alias, getSettingsFor(alias)) };
     }
 
     @Override
-    public StrategyPanel[] getCustomGuiFor(String alias, String indicatorName) {
-        return new StrategyPanel[] { this.settingsPanel };
+    public void acceptSettingsInterface(SettingsAccess settingsAccess) {
+        this.settingsAccess = settingsAccess;
     }
 
     private WeisWaveSettings getSettingsFor(String alias) {
@@ -250,6 +254,10 @@ public class IlbkoWeisWave implements
             WeisWaveSettings settings = settingsMap.get(alias);
             if (settings == null) {
                 settings = (WeisWaveSettings) settingsAccess.getSettings(alias, INDICATOR_NAME_BARS_BOTTOM, WeisWaveSettings.class);
+                if (settings.isEmpty()) {
+                    settings = new WeisWaveSettings(2, 60L);
+                    settingsChanged(alias, settings);
+                }
                 settingsMap.put(alias, settings);
             }
 
@@ -257,20 +265,23 @@ public class IlbkoWeisWave implements
         }
     }
 
-    private void settingsChanged(String alias, WeisWaveSettings settings) {
+    private void settingsChanged(String alias, WeisWaveSettings weisWaveSettings) {
         synchronized (locker) {
-            settingsAccess.setSettings(alias, INDICATOR_NAME_BARS_BOTTOM, settings, WeisWaveSettings.class);
+            settingsAccess.setSettings(alias, INDICATOR_NAME_BARS_BOTTOM, weisWaveSettings, WeisWaveSettings.class);
         }
     }
 
     @Override
-    public void onSettingsUpdate(WeisWaveSettings weisWaveSettings) {
+    public void onSettingsUpdate(String alias, WeisWaveSettings weisWaveSettings) {
         this.trendDetectionLength = weisWaveSettings.getTrendDetectionLength();
         this.candleIntervalNs = TimeUnit.SECONDS.toNanos(weisWaveSettings.getSeconds());
         this.finish();
-        //getGeneratorMessage(false);
+
         provider.sendUserMessage(new Layer1ApiDataInterfaceRequestMessage(dataStructureInterface -> this.dataStructureInterface = dataStructureInterface));
         addIndicator();
         provider.sendUserMessage(getGeneratorMessage(true));
+
+        settingsChanged(alias, weisWaveSettings);
+        settingsMap.put(alias, weisWaveSettings);
     }
 }

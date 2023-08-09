@@ -7,7 +7,7 @@ public class WeisWaveSettings {
     private int trendDetectionLength;
     private long seconds;
 
-    public WeisWaveSettings() { }
+    public WeisWaveSettings() {}
 
     public WeisWaveSettings(int trendDetectionLength, long seconds) {
         this.trendDetectionLength = trendDetectionLength;
@@ -18,15 +18,11 @@ public class WeisWaveSettings {
         return trendDetectionLength;
     }
 
-    public void setTrendDetectionLength(int trendDetectionLength) {
-        this.trendDetectionLength = trendDetectionLength;
-    }
-
     public long getSeconds() {
         return seconds;
     }
 
-    public void setSeconds(long seconds) {
-        this.seconds = seconds;
+    public boolean isEmpty() {
+        return trendDetectionLength <= 0;
     }
 }
