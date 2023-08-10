@@ -110,7 +110,7 @@ public class BarEvent implements
         to abysmally large imageHeight. No idea why that value is being returned, because volume at that moment is within
         normal values. */
         int top = yDataCoordinateToPixelFunction.apply((double) volume);
-        if (top < 0)
+        if (top <= 0)
             return null;
 
         int bottom = yDataCoordinateToPixelFunction.apply(BAR_START);

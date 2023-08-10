@@ -15,6 +15,7 @@ import velox.api.layer1.common.ListenableHelper;
 import velox.api.layer1.data.InstrumentInfo;
 import velox.api.layer1.layers.strategies.interfaces.*;
 import velox.api.layer1.messages.GeneratedEventInfo;
+import velox.api.layer1.messages.Layer1ApiHistoricalDataLoadedMessage;
 import velox.api.layer1.messages.Layer1ApiUserMessageAddStrategyUpdateGenerator;
 import velox.api.layer1.messages.UserMessageLayersChainCreatedTargeted;
 import velox.api.layer1.messages.indicators.*;
@@ -100,6 +101,7 @@ public class IlbkoWeisWave implements
                 IlbkoWeisWave.class,
                 TREE_NAME,
                 isAdd,
+                true,
                 true,
                 new UserMessageStrategyUpdateGenerator(candleIntervalNs, trendDetectionLength),
                 new GeneratedEventInfo[] {
@@ -196,12 +198,21 @@ public class IlbkoWeisWave implements
                 addAndActivateIndicator();
             }
         }
+
+        if (data.getClass() == Layer1ApiHistoricalDataLoadedMessage.class) {
+            reloadIndicator();
+        }
     }
 
     private void addAndActivateIndicator() {
         provider.sendUserMessage(new Layer1ApiDataInterfaceRequestMessage(dataStructureInterface -> this.dataStructureInterface = dataStructureInterface));
         addIndicator();
         provider.sendUserMessage(getGeneratorMessage(true));
+    }
+
+    private void reloadIndicator() {
+        finish();
+        addAndActivateIndicator();
     }
 
     private Layer1ApiUserMessageModifyIndicator getUserMessageAdd() {
