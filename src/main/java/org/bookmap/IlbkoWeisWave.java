@@ -62,7 +62,7 @@ public class IlbkoWeisWave implements
     private DataStructureInterface dataStructureInterface;
 
     private SettingsAccess settingsAccess;
-    private Map<String, WeisWaveSettings> settingsMap = new HashMap<>();
+    private final Map<String, WeisWaveSettings> settingsMap = new HashMap<>();
 
     private Object locker = new Object();
 
@@ -76,24 +76,12 @@ public class IlbkoWeisWave implements
 
         ListenableHelper.addListeners(provider, this);
 
-        //settingsPanel = new SettingsPanel(this);
         candleIntervalNs = TimeUnit.SECONDS.toNanos(60);
 
         Graphics graphics = tradeIcon.getGraphics();
         graphics.setColor(Color.BLUE);
         graphics.drawLine(0, 0, 15, 15);
         graphics.drawLine(15, 0, 0, 15);
-    }
-
-    @Override
-    public void finish() {
-        synchronized (indicatorsFullNameToUserName) {
-            for (String userName : indicatorsFullNameToUserName.values()) {
-                provider.sendUserMessage(new Layer1ApiUserMessageModifyIndicator(IlbkoWeisWave.class, userName, false));
-            }
-        }
-
-        provider.sendUserMessage(getGeneratorMessage(false));
     }
 
     private Layer1ApiUserMessageAddStrategyUpdateGenerator getGeneratorMessage(boolean isAdd) {
@@ -204,17 +192,6 @@ public class IlbkoWeisWave implements
         }
     }
 
-    private void addAndActivateIndicator() {
-        provider.sendUserMessage(new Layer1ApiDataInterfaceRequestMessage(dataStructureInterface -> this.dataStructureInterface = dataStructureInterface));
-        addIndicator();
-        provider.sendUserMessage(getGeneratorMessage(true));
-    }
-
-    private void reloadIndicator() {
-        finish();
-        addAndActivateIndicator();
-    }
-
     private Layer1ApiUserMessageModifyIndicator getUserMessageAdd() {
         return Layer1ApiUserMessageModifyIndicator.builder(IlbkoWeisWave.class, INDICATOR_NAME_BARS_BOTTOM)
                 .setIsAdd(true)
@@ -235,8 +212,29 @@ public class IlbkoWeisWave implements
         provider.sendUserMessage(message);
     }
 
+    private void addAndActivateIndicator() {
+        provider.sendUserMessage(new Layer1ApiDataInterfaceRequestMessage(dataStructureInterface -> this.dataStructureInterface = dataStructureInterface));
+        addIndicator();
+        provider.sendUserMessage(getGeneratorMessage(true));
+    }
+
+    @Override
+    public void finish() {
+        synchronized (indicatorsFullNameToUserName) {
+            for (String userName : indicatorsFullNameToUserName.values()) {
+                provider.sendUserMessage(new Layer1ApiUserMessageModifyIndicator(IlbkoWeisWave.class, userName, false));
+            }
+        }
+
+        provider.sendUserMessage(getGeneratorMessage(false));
+    }
+
+    private void reloadIndicator() {
+        finish();
+        addAndActivateIndicator();
+    }
+
     public int getBodyWidth(long intervalWidth) {
-        //long bodyWidth = CANDLE_INTERVAL_NS / intervalWidth;
         long bodyWidth = candleIntervalNs / intervalWidth;
         bodyWidth = Math.max(bodyWidth, MIN_BODY_WIDTH);
         bodyWidth = Math.min(bodyWidth, MAX_BODY_WIDTH);
@@ -254,8 +252,6 @@ public class IlbkoWeisWave implements
 
     @Override
     public StrategyPanel[] getCustomGuiFor(String alias, String indicatorName) {
-        //this.settingsPanel.setCurrentInstrumentAlias(alias);
-
         return new StrategyPanel[] { new SettingsPanel(this, alias, getSettingsFor(alias)) };
     }
 

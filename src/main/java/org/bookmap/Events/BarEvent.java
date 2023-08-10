@@ -24,7 +24,7 @@ public class BarEvent implements
     private Color barColor;
     private transient int bodyWidthPx;
     private static final int CACHE_MAX_SIZE = 100;
-    private static Map<Integer, BufferedImage> barsCache = new HashMap<>();
+    private static final Map<Integer, BufferedImage> barsCache = new HashMap<>();
 
     public BarEvent(long time) {
         this(time, 0, Double.NaN, null);
@@ -125,7 +125,6 @@ public class BarEvent implements
             bufferedImage = new BufferedImage(bodyWidthPx, imageHeight, BufferedImage.TYPE_INT_ARGB);
             barsCache.put(imageHeight, bufferedImage);
         }
-        //BufferedImage bufferedImage = new BufferedImage(bodyWidthPx, imageHeight, BufferedImage.TYPE_INT_ARGB);
 
         int imageCenterX = bufferedImage.getWidth() / 2;
 
